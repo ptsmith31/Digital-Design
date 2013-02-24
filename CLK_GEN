@@ -1,0 +1,55 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use ieee.math_real.all;
+
+entity clk_gen is
+  generic (
+    ms_period :     positive := 1000);          -- amount of ms for button to be
+                                        -- pressed before creating clock pulse
+  port (
+    clk25MHz  : in  std_logic;
+    rst       : in  std_logic;
+    button_n  : in  std_logic;
+    clk_out   : out std_logic);
+end clk_gen;
+
+architecture BHV of clk_gen is
+  constant WIDTH : integer := integer(ceil(log2(real(ms_period))));
+   signal count, next_count : unsigned(WIDTH-1 downto 0);
+   signal met_ms_per : std_logic;
+	
+begin
+	clk_out <= met_ms_per;
+	
+	-- 2- process model
+	-- compare to period value
+	process(count) 
+	begin
+		if (count = ms_period) then
+			met_ms_per <= '1';
+		else
+			met_ms_per <= '0';
+		end if;
+	end process;
+	
+	next_count <= count +1;
+	
+	--increment the count register
+	process(rst, clk25MHz, count, next_count)
+	begin
+		if( rst = '1') then
+			count <= (others => '0');
+		elsif(rising_edge(clk25MHz)) then
+			if(button_n = '0') then  -- Active low
+				if(met_ms_per = '1') then
+					count <= (others => '0');
+				else
+					count <= next_count;
+				end if;
+			else
+				count <= count;
+			end if;
+		end if;
+	end process;
+end BHV;
